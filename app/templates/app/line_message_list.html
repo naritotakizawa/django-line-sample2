@@ -4,16 +4,22 @@
 {% block content %}
     <h1>{{ push.display_name }} チャット</h1>
     {% for message in message_list %}
-        {% if message.is_admin %}
-            <div class="card right">
-        {% else %}
-            <div class="card left">
+
+        {% if message.text %}
+            <div class="card {% if message.is_admin %}right{% else %}left{% endif %}">
+                {{ message.text }} - {{ message.created_at }}
+            </div>
         {% endif %}
-    {{ message.text }} - {{ message.created_at }}
-    </div>
+
+        {% if message.image %}
+            <div class="card {% if message.is_admin %}right{% else %}left{% endif %}">
+                <img src="{{ message.image.url }}" style="max-width: 100%; height: auto">
+            </div>
+        {% endif %}
+
     {% endfor %}
 
-    <form action="" method="POST">
+    <form action="" method="POST" enctype="multipart/form-data">
         {{ form.as_p }}
         <button type="submit">送信</button>
         {% csrf_token %}

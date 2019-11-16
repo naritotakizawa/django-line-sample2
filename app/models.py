@@ -14,10 +14,10 @@ class LinePush(models.Model):
 class LineMessage(models.Model):
     """Lineの各メッセージを表現する"""
     push = models.ForeignKey(LinePush, verbose_name='プッシュ先', on_delete=models.SET_NULL, blank=True, null=True)
-    text = models.TextField('テキスト')
+    text = models.TextField('テキスト', blank=True)
+    image = models.ImageField('画像', blank=True, null=True)
     is_admin = models.BooleanField('このメッセージは管理者側の発言か', default=True)
     created_at = models.DateTimeField('作成日', default=timezone.now)
 
     def __str__(self):
-        return f'{self.push} - {self.text[:10]} - {self.is_admin}'
-
+        return f'{self.push} - {self.is_admin}'

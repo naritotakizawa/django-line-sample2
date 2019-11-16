@@ -1,11 +1,12 @@
 import json
+from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views import generic
 from django.views.decorators.csrf import csrf_exempt
 from .models import LinePush, LineMessage
 import linebot
-from linebot.models import TextSendMessage
+from linebot.models import TextSendMessage, ImageSendMessage
 
 
 line_bot_api = linebot.LineBotApi('アクセストークン')
@@ -34,9 +35,22 @@ def callback(request):
 
         # メッセージ受信時
         elif events[0]['type'] == 'message':
-            text = request_json['events'][0]['message']['text']
             line_push = get_object_or_404(LinePush, user_id=line_user_id)
-            LineMessage.objects.create(push=line_push, text=text, is_admin=False)
+
+            # テキストメッセージの場合
+            if events[0]['message']['type'] == 'text':
+                text = events[0]['message']['text']
+                LineMessage.objects.create(push=line_push, text=text, is_admin=False)
+
+            # 画像メッセージの場合
+            elif events[0]['message']['type'] == 'image':
+                message_id = events[0]['message']['id']
+                result = line_bot_api.get_message_content(message_id)
+                content_type = result.content_type
+                extension = content_type.split('/')[-1]
+                file_name = 'line.{}'.format(extension)
+                line = LineMessage.objects.create(push=line_push, is_admin=False)
+                line.image.save(file_name, ContentFile(result.content))
 
     return HttpResponse()
 
@@ -48,7 +62,7 @@ class LineUserList(generic.ListView):
 
 class LineMessageList(generic.CreateView):
     model = LineMessage
-    fields = ('text',)
+    fields = ('text', 'image')
     template_name = 'app/line_message_list.html'
 
     def get_context_data(self, **kwargs):
@@ -61,8 +75,25 @@ class LineMessageList(generic.CreateView):
     def form_valid(self, form):
         line_push = get_object_or_404(LinePush, pk=self.kwargs['pk'])
         message = form.save(commit=False)
-        message.push = line_push
-        message.is_admin = True
-        message.save()
-        line_bot_api.push_message(line_push.user_id, messages=TextSendMessage(text=message.text))
+
+        # テキストか画像が送信されていれば
+        if message.text or message.image:
+            message.push = line_push
+            message.is_admin = True
+            message.save()
+
+            if message.text:
+                line_bot_api.push_message(line_push.user_id, messages=TextSendMessage(text=message.text))
+
+            if message.image:
+                url = '{0}://{1}{2}'.format(
+                    self.request.scheme,
+                    self.request.get_host(),
+                    message.image.url,
+                )
+                image_message = ImageSendMessage(
+                    original_content_url=url,
+                    preview_image_url=url,
+                )
+                line_bot_api.push_message(line_push.user_id, messages=image_message)
         return redirect('app:line_message_list', pk=line_push.pk)

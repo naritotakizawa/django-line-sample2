@@ -1,5 +1,5 @@
-# django-line-sample
-Botモードを使いつつ1対1のチャット機能をDjango側の機能を使って実装していくサンプル
+# django-line-sample2
+[django-line-sample](https://github.com/naritotakizawa/django-line-sample2)に、画像の送受信機能をつけたもの。
 
 
-[解説ブログ](https://narito.ninja/blog/detail/149/)
+[解説ブログ](https://narito.ninja/blog/detail/154/)
